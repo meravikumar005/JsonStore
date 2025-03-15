@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use std::{env, process, fs};
+use std::{env, process, fs, io};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct JsonStore {
@@ -14,35 +14,42 @@ impl JsonStore {
        }
      }
 
-    fn load_from_file(filename:&str) -> Self {
+    fn load_from_file(filename:&str) -> Result<Self, io::Error> {
         let content = fs::read_to_string(&filename).unwrap_or_else(|_| "{}".to_string());
-        serde_json::from_str(&content).unwrap_or_else(|_| Self::new())
+        let store:Self = serde_json::from_str(&content).unwrap_or_else(|_| Self::new());
+        Ok(store)
     }
 
-    fn save_to_file(&self, filename:&str) {
+    fn save_to_file(&self, filename:&str) -> Result<(), io::Error> {
         let content = serde_json::to_string_pretty(&self).expect("Error serializing data to json");
         fs::write(filename, content).expect("Error writing data to file");
+        Ok(())
     }
 
-    fn set(&mut self, key:&str, value:&str, filename:&str) {
+    fn set(&mut self, key:&str, value:&str, filename:&str)-> Result<(), io::Error> {
         self.data.insert(key.to_string(), value.to_string());
-        self.save_to_file(filename);
+        self.save_to_file(filename)?;
         println!("saved {}", key);
+        Ok(())
     }
 
-    fn get(&self, key:&str) {
+    fn get(&self, key:&str) -> Result<(), io::Error> {
         match self.data.get(key) {
             Some(value) => println!("Name: {}", value),
             None => println!("No key found")
         }
+
+        Ok(())
     }
 
-    fn delete(&mut self, key:&str, filename:&str) {
+    fn delete(&mut self, key:&str, filename:&str) -> Result<(), io::Error> {
         if self.data.remove(key).is_some() {
-            self.save_to_file(filename);
+            self.save_to_file(filename)?;
         } else {
             println!("No key found");
         }
+
+        Ok(())
     }
 }
 
